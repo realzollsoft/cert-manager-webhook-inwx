@@ -3,7 +3,7 @@ module github.com/andibraeu/cert-manager-webhook-inwx
 go 1.24
 
 require (
-	github.com/cert-manager/cert-manager v1.18.2
+	github.com/cert-manager/cert-manager v1.18.3
 	github.com/go-logr/logr v1.4.2
 	github.com/miekg/dns v1.1.62
 	github.com/nrdcg/goinwx v0.6.1
