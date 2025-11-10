@@ -67,9 +67,9 @@ func (s *solver) Present(ch *v1alpha1.ChallengeRequest) error {
 
 	defer func() {
 		if err := client.Account.Logout(); err != nil {
-			klog.Errorf("failed to log out from %s: %v", client.BaseURL, err)
+			klog.Errorf("failed to log out from INWX API (sandbox: %v): %v", cfg.Sandbox, err)
 		}
-		klog.V(3).Infof("logged out from %s", client.BaseURL)
+		klog.V(3).Infof("logged out from INWX API (sandbox: %v)", cfg.Sandbox)
 	}()
 
 	var request = &goinwx.NameserverRecordRequest{
@@ -103,16 +103,16 @@ func (s *solver) Present(ch *v1alpha1.ChallengeRequest) error {
 
 func (s *solver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 
-	client, _, err := s.newClientFromChallenge(ch)
+	client, cfg, err := s.newClientFromChallenge(ch)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err := client.Account.Logout(); err != nil {
-			klog.Errorf("failed to log out from %s: %v", client.BaseURL, err)
+			klog.Errorf("failed to log out from INWX API (sandbox: %v): %v", cfg.Sandbox, err)
 		}
-		klog.V(3).Infof("logged out from %s", client.BaseURL)
+		klog.V(3).Infof("logged out from INWX API (sandbox: %v)", cfg.Sandbox)
 	}()
 
 	response, err := client.Nameservers.Info(&goinwx.NameserverInfoRequest{
@@ -231,10 +231,10 @@ func (s *solver) newClientFromChallenge(ch *v1alpha1.ChallengeRequest) (*goinwx.
 	if err != nil {
 		return nil, &cfg, fmt.Errorf("error getting credentials: %v", err)
 	}
+	opts := &goinwx.ClientOptions{Sandbox: cfg.Sandbox}
+	client := *goinwx.NewClient(creds.Username, creds.Password, opts)
 
-	client := *goinwx.NewClient(creds.Username, creds.Password, &goinwx.ClientOptions{Sandbox: cfg.Sandbox})
-
-	err = client.Account.Login()
+	_, err = client.Account.Login()
 	if err != nil {
 		klog.Error(err)
 		return nil, &cfg, fmt.Errorf("%v", err)
@@ -247,7 +247,7 @@ func (s *solver) newClientFromChallenge(ch *v1alpha1.ChallengeRequest) (*goinwx.
 		}
 	}
 
-	klog.V(3).Infof("logged in at %s", client.BaseURL)
+	klog.V(3).Infof("logged in at INWX API (sandbox: %v)", cfg.Sandbox)
 
 	return &client, &cfg, nil
 }
