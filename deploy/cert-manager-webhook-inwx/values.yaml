@@ -1,4 +1,4 @@
-groupName: cert-manager-webhook-inwx.smueller18.gitlab.com
+groupName: cert-manager-webhook-inwx.realzollsoft.github.com
 
 credentialsSecretRefs:
 - inwx-credentials
@@ -11,8 +11,8 @@ certManager:
   serviceAccountName: cert-manager
 
 image:
-  repository: registry.gitlab.com/smueller18/cert-manager-webhook-inwx
-  tag: v0.5.0
+  repository: ghcr.io/realzollsoft/cert-manager-webhook-inwx
+  tag: v0.0.1
   pullPolicy: IfNotPresent
 
 nameOverride: ""

@@ -1,8 +1,8 @@
 apiVersion: v2
 description: A Helm chart cert-manager ACME Webhook for INWX
 name: cert-manager-webhook-inwx
-version: 0.5.0
-appVersion: 0.5.0
+version: 0.0.1
+appVersion: 0.0.1
 maintainers:
-  - name: Stephan Müller
-    url: https://gitlab.com/smueller18/cert-manager-webhook-inwx
+  - name: realzollsoft
+    url: https://github.com/realzollsoft/cert-manager-webhook-inwx

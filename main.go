@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 	certmgrv1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
@@ -14,12 +17,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
-	"strings"
-	"time"
 )
 
 func main() {
-	cmd.RunWebhookServer("cert-manager-webhook-inwx.smueller18.gitlab.com",
+	cmd.RunWebhookServer("cert-manager-webhook-inwx.realzollsoft.github.com",
 		&solver{},
 	)
 }

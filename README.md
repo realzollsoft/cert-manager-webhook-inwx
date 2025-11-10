@@ -2,7 +2,12 @@
 
 This project provides a cert-manager ACME Webhook for [INWX](https://inwx.de/) and a corresponding helm chart.
 
-The helm chart is listed at Artifact Hub in repository [smueller18](https://artifacthub.io/packages/search?page=1&repo=smueller18) at <https://artifacthub.io/packages/helm/smueller18/cert-manager-webhook-inwx>.
+## History
+This project was initiated by [smueller18](https://gitlab.com/smueller18), who kindly created and maintained the [project](https://gitlab.com/smueller18/cert-manager-webhook-inwx) from 2019 to 2022, until it has been archived on gitlab.
+In june 2025, @andibraeu brought the project to [github](https://github.com/andibraeu/cert-manager-webhook-inwx), provided excellent work by updating dependencies, overhauling the tests, setting up renovate and creating github workflows. Sadly, the project seems to be abandoned since a while.
+
+Thus, we decided to take over, maintain it and extend it according to our needs. 
+We also decided to handle the versioning independently from previously existing artifacts and start freshly with v0.0.1
 
 ## Requirements
 
@@ -16,12 +21,12 @@ The following table lists the configurable parameters of the cert-manager chart 
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `groupName` | Group name of the API service. | `cert-manager-webhook-inwx.smueller18.gitlab.com` |
+| `groupName` | Group name of the API service. | `cert-manager-webhook-inwx.realzollsoft.github.com` |
 | `credentialsSecretRefs` | Names of secrets where INWX credentials are stored. Used for RBAC to allow reading the secret by the service account name of webhook. | `['inwx-credentials']` |
 | `deployment.loglevel` | Number for the log level verbosity of webhook deployment | 2 |
 | `certManager.namespace` | Namespace where cert-manager is deployed to. | `cert-manager` |
 | `certManager.serviceAccountName` | Service account of cert-manager installation. | `cert-manager` |
-| `image.repository` | Image repository | `registry.gitlab.com/smueller18/cert-manager-webhook-inwx` |
+| `image.repository` | Image repository | `ghcr.io/realzollsoft/cert-manager-webhook-inwx` |
 | `image.tag` | Image tag | `v0.4.1` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `service.type` | API service type | `ClusterIP` |
@@ -40,9 +45,9 @@ Follow the [instructions](https://cert-manager.io/docs/installation/) using the 
 ### Webhook
 
 ```bash
-helm repo add smueller18 https://smueller18.gitlab.io/helm-charts
+helm repo add zollsoft https://realzollsoft.github.io/helm-charts
 helm repo update
-helm install --namespace cert-manager cert-manager-webhook-inwx smueller18/cert-manager-webhook-inwx
+helm install --namespace cert-manager cert-manager-webhook-inwx zollsoft/cert-manager-webhook-inwx
 ```
 
 **Note**: The kubernetes resources used to install the Webhook should be deployed within the same namespace as the cert-manager.
@@ -77,7 +82,7 @@ spec:
     solvers:
       - dns01:
           webhook:
-            groupName: cert-manager-webhook-inwx.smueller18.gitlab.com
+            groupName: cert-manager-webhook-inwx.realzollsoft.github.com
             solverName: inwx
             config:
               ttl: 300 # default 300
@@ -156,7 +161,7 @@ spec:
 
 ### Requirements
 
-- [go](https://golang.org/) >= 1.13.0
+- [go](https://golang.org/) >= 1.24.0
 
 ### Running the test suite
 
@@ -198,7 +203,7 @@ spec:
 ### Building the container image
 
 ```bash
-docker build -t registry.gitlab.com/smueller18/cert-manager-webhook-inwx:master .
+docker build -t ghcr.io/realzollsoft/cert-manager-webhook-inwx:main .
 ```
 
 ### Running the full suite with microk8s
@@ -208,7 +213,7 @@ Tested with Ubuntu:
 ```bash
 sudo snap install microk8s --classic
 sudo microk8s.enable dns rbac
-sudo microk8s.kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.0.1/cert-manager.yaml
+sudo microk8s.kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.19.1/cert-manager.yaml
 sudo microk8s.config > /tmp/microk8s.config
 export KUBECONFIG=/tmp/microk8s.config
 helm install --namespace cert-manager cert-manager-webhook-inwx deploy/cert-manager-webhook-inwx
