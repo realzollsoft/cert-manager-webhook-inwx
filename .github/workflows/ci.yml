@@ -107,9 +107,6 @@ jobs:
           export INWX_USER_OTP_BASE64=$(echo -n "$INWX_USER_OTP" | base64 -w 0)
           export INWX_PASSWORD_OTP_BASE64=$(echo -n "$INWX_PASSWORD_OTP" | base64 -w 0)
           export INWX_OTPKEY_BASE64=$(echo -n "$INWX_OTPKEY" | base64 -w 0)
-          
-          # Set up environment for kubebuilder
-          export KUBEBUILDER_ASSETS=./kubebuilder/bin
 
           # Generate test config files
           envsubst < testdata/config.json.tpl > testdata/config.json
@@ -142,6 +139,7 @@ jobs:
           INWX_USER_OTP: ${{ vars.INWX_USER_OTP }}
           INWX_PASSWORD_OTP: ${{ secrets.INWX_PASSWORD_OTP }}
           INWX_OTPKEY: ${{ secrets.INWX_OTPKEY }}
+          KUBEBUILDER_ASSETS: "./kubebuilder/bin"
 
   # Build and Push Multi-Arch Docker Images
   build-and-push:
