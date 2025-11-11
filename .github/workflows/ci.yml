@@ -108,6 +108,9 @@ jobs:
           export INWX_PASSWORD_OTP_BASE64=$(echo -n "$INWX_PASSWORD_OTP" | base64 -w 0)
           export INWX_OTPKEY_BASE64=$(echo -n "$INWX_OTPKEY" | base64 -w 0)
           
+          # Set up environment for kubebuilder
+          export KUBEBUILDER_ASSETS=./kubebuilder/bin
+
           # Generate test config files
           envsubst < testdata/config.json.tpl > testdata/config.json
           envsubst < testdata/secret-inwx-credentials.yaml.tpl > testdata/secret-inwx-credentials.yaml
