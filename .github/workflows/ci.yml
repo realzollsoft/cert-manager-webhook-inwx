@@ -139,7 +139,9 @@ jobs:
           INWX_USER_OTP: ${{ vars.INWX_USER_OTP }}
           INWX_PASSWORD_OTP: ${{ secrets.INWX_PASSWORD_OTP }}
           INWX_OTPKEY: ${{ secrets.INWX_OTPKEY }}
-          KUBEBUILDER_ASSETS: "./kubebuilder/bin"
+          TEST_ASSET_ETCD: "./kubebuilder/bin/etcd"
+          TEST_ASSET_KUBE_APISERVER: "./kubebuilder/bin/kube-apiserver"
+          TEST_ASSET_KUBECTL: "./kubebuilder/bin/kubectl"
 
   # Build and Push Multi-Arch Docker Images
   build-and-push:
