@@ -1,5 +1,26 @@
 package main
 
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"flag"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	logf "github.com/cert-manager/cert-manager/pkg/logs"
+	dns "github.com/cert-manager/cert-manager/test/acme"
+	"github.com/cert-manager/cert-manager/test/acme/server"
+	"github.com/realzollsoft/cert-manager-webhook-inwx/test"
+	"go.yaml.in/yaml/v3"
+	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/klog"
+	"k8s.io/klog/klogr"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+)
+
 // testConfig represents the test configuration structure
 type testConfig struct {
 	Username             string       `json:"username"`
@@ -16,282 +37,303 @@ type SecretKeyRef struct {
 	Key  string `json:"key"`
 }
 
-var (
-// zone      = "zollsoft.de."
-// zoneTwoFA = "zollsoftmfa.de."
+type testK8SSecret struct {
+	APIVersion string                `yaml:"apiVersion,omitempty"`
+	Kind       string                `yaml:",omitempty"`
+	Metadata   TestK8SSecretMetadata `yaml:"metadata"`
+	Data       TestK8SSecretData     `yaml:"data,omitempty"`
+}
+type TestK8SSecretMetadata struct {
+	Name string `yaml:"name,omitempty"`
+}
+type TestK8SSecretData struct {
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
+	OTPKey   string `yaml:"otpKey,omitempty"`
+}
 
-// testEnv *envtest.Environment
-// cfg     *rest.Config
+var (
+	zone      = "zollsoft.de."
+	zoneTwoFA = "zollsoftmfa.de."
+	fqdn      string
 )
 
-// func TestMain(m *testing.M) {
-// 	// Skip API integration tests if running with dummy credentials
-// 	if os.Getenv("INWX_USER") == "" || os.Getenv("INWX_USER") == "test-user" {
-// 		fmt.Println("Skipping integration tests - no real INWX credentials provided")
-// 		os.Exit(0)
-// 	}
+func checkTestBasicPreconditions(t *testing.T) {
+	// Skip API integration tests if running with dummy credentials
+	if os.Getenv("INWX_USER") == "" || os.Getenv("INWX_USER") == "test-user" {
+		t.Skip("Skipping API integration tests - no real INWX credentials provided")
+	}
+}
+func checkTest2FAPreconditions(t *testing.T) {
+	// Skip API integration tests if running with dummy credentials
+	if os.Getenv("INWX_USER_OTP") == "" || os.Getenv("INWX_USER_OTP") == "test-user-otp" {
+		t.Skip("Skipping API integration tests - no real INWX OTP credentials provided")
+	}
+}
 
-// 	if os.Getenv("TEST_ZONE_NAME") != "" {
-// 		zone = os.Getenv("TEST_ZONE_NAME")
-// 	}
+func TestRunSuite(t *testing.T) {
+	checkTestBasicPreconditions(t)
+	if os.Getenv("TEST_ZONE_NAME") != "" {
+		zone = os.Getenv("TEST_ZONE_NAME")
+	}
+	fqdn = "cert-manager-dns01-tests." + zone
 
-// 	// Start test environment
-// 	testEnv = &envtest.Environment{}
-// 	var err error
-// 	cfg, err = testEnv.Start()
-// 	if err != nil {
-// 		panic(err)
-// 	}
+	srv, ctx := createBasicServerAndCtx(t, "dnsBasicServe", zone)
+	if err := srv.Run(ctx, "udp"); err != nil {
+		t.Fatalf("failed to start test server: %v", err)
+	}
+	defer srv.Shutdown()
 
-// 	code := m.Run()
+	configData := testConfig{
+		Username: os.Getenv("INWX_USER"),
+		Password: os.Getenv("INWX_PASSWORD"),
+	}
 
-// 	// Stop test environment
-// 	if err := testEnv.Stop(); err != nil {
-// 		panic(err)
-// 	}
+	configJSON := jsonBytesWithSandboxAndTTL300(t, &configData)
 
-// 	os.Exit(code)
-// }
+	fixture := dns.NewFixture(&solver{},
+		dns.SetResolvedZone(zone),
+		dns.SetResolvedFQDN(fqdn),
+		dns.SetAllowAmbientCredentials(false),
+		dns.SetDNSServer(srv.ListenAddr()),
+		dns.SetPropagationLimit(time.Duration(60)*time.Second),
+		dns.SetUseAuthoritative(false),
+		// Set to false because INWX implementation deletes all records
+		dns.SetStrict(false),
+		dns.SetConfig(&extapi.JSON{
+			Raw: configJSON,
+		}),
+	)
 
-// func TestSolver_Present(t *testing.T) {
-// 	solver := &solver{}
+	fixture.RunConformance(t)
+}
 
-// 	// Test basic configuration
-// 	configData := testConfig{
-// 		Username: os.Getenv("INWX_USER"),
-// 		Password: os.Getenv("INWX_PASSWORD"),
-// 		TTL:      300,
-// 		Sandbox:  true,
-// 	}
+func TestRunSuiteWithSecret(t *testing.T) {
+	checkTestBasicPreconditions(t)
 
-// 	configJSON, err := json.Marshal(configData)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal config: %v", err)
-// 	}
+	if os.Getenv("TEST_ZONE_NAME") != "" {
+		zone = os.Getenv("TEST_ZONE_NAME")
+	}
+	fqdn = "cert-manager-dns01-tests-with-secret." + zone
 
-// 	ch := &v1alpha1.ChallengeRequest{
-// 		ResolvedZone: zone,
-// 		ResolvedFQDN: fmt.Sprintf("_acme-challenge.test.%s", zone),
-// 		Key:          "test-key-value",
-// 		Config: &extapi.JSON{
-// 			Raw: configJSON,
-// 		},
-// 	}
+	srv, ctx := createBasicServerAndCtx(t, "dnsBasicServerSecret", zone)
+	if err := srv.Run(ctx, "udp"); err != nil {
+		t.Fatalf("failed to start test server: %v", err)
+	}
+	defer srv.Shutdown()
 
-// 	err = solver.Present(ch)
-// 	if err != nil {
-// 		t.Errorf("Expected Present to succeed, but got error: %v", err)
-// 	}
+	configData := testConfig{
+		UsernameSecretKeyRef: SecretKeyRef{
+			Name: "inwx-credentials",
+			Key:  "username",
+		},
+		PasswordSecretKeyRef: SecretKeyRef{
+			Name: "inwx-credentials",
+			Key:  "password",
+		},
+	}
 
-// 	// Clean up
-// 	err = solver.CleanUp(ch)
-// 	if err != nil {
-// 		t.Errorf("Expected CleanUp to succeed, but got error: %v", err)
-// 	}
-// }
+	configJSON := jsonBytesWithSandboxAndTTL300(t, &configData)
+	sec := newTestK8SSecretUserPass()
+	fd, fp, err := writeSecretConfigToDir(t, "inwx-secret.yaml", sec)
+	defer deleteFile(t, fp)
+	if err != nil {
+		t.Logf("Could not write secret config: %v", err)
+		t.FailNow()
+	}
 
-// func TestSolver_PresentWithSecret(t *testing.T) {
-// 	solver := &solver{}
+	fixture := dns.NewFixture(&solver{},
+		dns.SetResolvedZone(zone),
+		dns.SetResolvedFQDN(fqdn),
+		dns.SetAllowAmbientCredentials(false),
+		dns.SetDNSServer(srv.ListenAddr()),
+		dns.SetManifestPath(fd),
+		dns.SetPropagationLimit(time.Duration(60)*time.Second),
+		dns.SetUseAuthoritative(false),
+		dns.SetConfig(&extapi.JSON{
+			Raw: configJSON,
+		}),
+	)
 
-// 	// Test with secret references (will fail in test environment but should not panic)
-// 	configData := testConfig{
-// 		UsernameSecretKeyRef: struct {
-// 			Name string `json:"name"`
-// 			Key  string `json:"key"`
-// 		}{
-// 			Name: "inwx-credentials",
-// 			Key:  "username",
-// 		},
-// 		PasswordSecretKeyRef: struct {
-// 			Name string `json:"name"`
-// 			Key  string `json:"key"`
-// 		}{
-// 			Name: "inwx-credentials",
-// 			Key:  "password",
-// 		},
-// 		TTL:     300,
-// 		Sandbox: true,
-// 	}
+	fixture.RunConformance(t)
+}
 
-// 	configJSON, err := json.Marshal(configData)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal config: %v", err)
-// 	}
+func TestRunSuiteWithTwoFA(t *testing.T) {
+	checkTest2FAPreconditions(t)
 
-// 	ch := &v1alpha1.ChallengeRequest{
-// 		ResolvedZone: zone,
-// 		ResolvedFQDN: fmt.Sprintf("_acme-challenge.test-with-secret.%s", zone),
-// 		Key:          "test-key-value",
-// 		Config: &extapi.JSON{
-// 			Raw: configJSON,
-// 		},
-// 	}
+	if os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA") != "" {
+		zoneTwoFA = os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA")
+	}
 
-// 	// This will likely fail due to missing secret, but should not panic
-// 	err = solver.Present(ch)
-// 	if err == nil {
-// 		// If it succeeds, clean up
-// 		solver.CleanUp(ch)
-// 	}
-// 	// We don't fail the test here since secrets won't be available in test environment
-// }
+	fqdn = "cert-manager-dns01-tests." + zoneTwoFA
 
-// func TestSolver_PresentWithTwoFA(t *testing.T) {
-// 	if os.Getenv("INWX_USER_OTP") == "" || os.Getenv("INWX_USER_OTP") == "test-user-otp" {
-// 		t.Skip("Skipping OTP tests - no real INWX OTP credentials provided")
-// 	}
+	srv, ctx := createBasicServerAndCtx(t, "dnsBasicServer", zoneTwoFA)
+	if err := srv.Run(ctx, "udp"); err != nil {
+		t.Fatalf("failed to start test server: %v", err)
+	}
+	defer srv.Shutdown()
+	configData := testConfig{
+		Username: os.Getenv("INWX_USER_OTP"),
+		Password: os.Getenv("INWX_PASSWORD_OTP"),
+		OTPKey:   os.Getenv("INWX_OTPKEY"),
+	}
+	configJSON := jsonBytesWithSandboxAndTTL300(t, &configData)
 
-// 	if os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA") != "" {
-// 		zoneTwoFA = os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA")
-// 	}
+	fixture := dns.NewFixture(&solver{},
+		dns.SetResolvedZone(zoneTwoFA),
+		dns.SetResolvedFQDN(fqdn),
+		dns.SetAllowAmbientCredentials(false),
+		dns.SetDNSServer(srv.ListenAddr()),
+		dns.SetPropagationLimit(time.Duration(60)*time.Second),
+		dns.SetUseAuthoritative(false),
+		// Set to false because INWX implementation deletes all records
+		dns.SetStrict(false),
+		dns.SetConfig(&extapi.JSON{
+			Raw: configJSON,
+		}),
+	)
 
-// 	solver := &solver{}
+	fixture.RunConformance(t)
+}
 
-// 	configData := testConfig{
-// 		Username: os.Getenv("INWX_USER_OTP"),
-// 		Password: os.Getenv("INWX_PASSWORD_OTP"),
-// 		OTPKey:   os.Getenv("INWX_TOTP_SECRET"),
-// 		TTL:      300,
-// 		Sandbox:  true,
-// 	}
+func TestRunSuiteWithSecretAndTwoFA(t *testing.T) {
+	checkTest2FAPreconditions(t)
 
-// 	configJSON, err := json.Marshal(configData)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal config: %v", err)
-// 	}
+	if os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA") != "" {
+		zoneTwoFA = os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA")
+	}
+	fqdn = "cert-manager-dns01-tests-with-secret." + zoneTwoFA
 
-// 	ch := &v1alpha1.ChallengeRequest{
-// 		ResolvedZone: zoneTwoFA,
-// 		ResolvedFQDN: fmt.Sprintf("_acme-challenge.test-2fa.%s", zoneTwoFA),
-// 		Key:          "test-key-value-2fa",
-// 		Config: &extapi.JSON{
-// 			Raw: configJSON,
-// 		},
-// 	}
+	srv, ctx := createBasicServerAndCtx(t, "dnsBasicServerSecret", zoneTwoFA)
 
-// 	err = solver.Present(ch)
-// 	if err != nil {
-// 		t.Errorf("Expected Present with 2FA to succeed, but got error: %v", err)
-// 	}
+	if err := srv.Run(ctx, "udp"); err != nil {
+		t.Fatalf("failed to start test server: %v", err)
+	}
+	defer srv.Shutdown()
+	configData := testConfig{
+		UsernameSecretKeyRef: SecretKeyRef{
+			Name: "inwx-credentials",
+			Key:  "username",
+		},
+		PasswordSecretKeyRef: SecretKeyRef{
+			Name: "inwx-credentials",
+			Key:  "password",
+		},
+		OTPKeySecretKeyRef: SecretKeyRef{
+			Name: "inwx-credentials",
+			Key:  "otpKey",
+		},
+	}
 
-// 	// Clean up
-// 	err = solver.CleanUp(ch)
-// 	if err != nil {
-// 		t.Errorf("Expected CleanUp with 2FA to succeed, but got error: %v", err)
-// 	}
-// }
+	configJSON := jsonBytesWithSandboxAndTTL300(t, &configData)
+	sec := newTestK8SSecretWith2FA()
+	fd, fp, err := writeSecretConfigToDir(t, "inwx-otp-secret.yaml", sec)
+	defer deleteFile(t, fp)
+	if err != nil {
+		t.Logf("Could not write secret config: %v", err)
+		t.FailNow()
+	}
+	fixture := dns.NewFixture(&solver{},
+		dns.SetResolvedZone(zoneTwoFA),
+		dns.SetResolvedFQDN(fqdn),
+		dns.SetAllowAmbientCredentials(false),
+		dns.SetDNSServer(srv.ListenAddr()),
+		dns.SetManifestPath(fd),
+		dns.SetPropagationLimit(time.Duration(60)*time.Second),
+		dns.SetUseAuthoritative(false),
+		dns.SetConfig(&extapi.JSON{
+			Raw: configJSON,
+		}),
+	)
 
-// func TestSolver_PresentWithSecretAndTwoFA(t *testing.T) {
-// 	if os.Getenv("INWX_USER_OTP") == "" || os.Getenv("INWX_USER_OTP") == "test-user-otp" {
-// 		t.Skip("Skipping OTP tests - no real INWX OTP credentials provided")
-// 	}
+	fixture.RunConformance(t)
+}
 
-// 	if os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA") != "" {
-// 		zoneTwoFA = os.Getenv("TEST_ZONE_NAME_WITH_TWO_FA")
-// 	}
+func createBasicServerAndCtx(t *testing.T, name string, zoneStr string) (*server.BasicServer, context.Context) {
+	klog.InitFlags(nil)
+	err := flag.Set("v", "3")
+	if err != nil {
+		t.Logf("error setting log flag", err)
+		t.FailNow()
+	}
+	flag.Parse()
+	l := klogr.New().WithName("certmanager-inwx-test")
+	log.SetLogger(l)
+	ctx := logf.NewContext(context.TODO(), l, t.Name())
+	srv := &server.BasicServer{
+		Handler: &test.Handler{
+			Log: logf.FromContext(ctx, name),
+			TxtRecords: map[string][][]string{
+				fqdn: {
+					{},
+					{},
+					{"123d=="},
+					{"123d=="},
+				},
+			},
+			Zones: []string{zoneStr},
+		},
+	}
+	return srv, ctx
+}
 
-// 	solver := &solver{}
+// jsonBytesWithSandboxAndTTL300 sets "sandbox" in config to "true" and a TTL of 300
+// returns the json-representation of the config as byte-slice
+func jsonBytesWithSandboxAndTTL300(t *testing.T, cfg *testConfig) []byte {
+	cfg.Sandbox = true
+	cfg.TTL = 300
+	configJSON, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("Failed to marshal config: %v", err)
+	}
+	return configJSON
+}
 
-// 	// Test OTP with secret references
-// 	configData := testConfig{
-// 		UsernameSecretKeyRef: struct {
-// 			Name string `json:"name"`
-// 			Key  string `json:"key"`
-// 		}{
-// 			Name: "inwx-credentials-otp",
-// 			Key:  "username",
-// 		},
-// 		PasswordSecretKeyRef: struct {
-// 			Name string `json:"name"`
-// 			Key  string `json:"key"`
-// 		}{
-// 			Name: "inwx-credentials-otp",
-// 			Key:  "password",
-// 		},
-// 		OTPKeySecretKeyRef: struct {
-// 			Name string `json:"name"`
-// 			Key  string `json:"key"`
-// 		}{
-// 			Name: "inwx-credentials-otp",
-// 			Key:  "otpKey",
-// 		},
-// 		TTL:     300,
-// 		Sandbox: true,
-// 	}
+func writeSecretConfigToDir(t *testing.T, fName string, v testK8SSecret) (string, string, error) {
+	testDir := t.TempDir()
+	fullPath := filepath.Join(testDir, fName)
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return "", "", err
+	}
+	return testDir, fullPath, os.WriteFile(fullPath, data, 0777)
+}
+func deleteFile(t *testing.T, fPath string) {
+	if fPath != "" && fPath != "/" {
+		return
+	}
+	err := os.Remove(fPath)
+	if err != nil {
+		t.Logf("Couldn't delete file %v", fPath)
+	}
+}
 
-// 	configJSON, err := json.Marshal(configData)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal config: %v", err)
-// 	}
-
-// 	ch := &v1alpha1.ChallengeRequest{
-// 		ResolvedZone: zoneTwoFA,
-// 		ResolvedFQDN: fmt.Sprintf("_acme-challenge.test-secret-2fa.%s", zoneTwoFA),
-// 		Key:          "test-key-value-secret-2fa",
-// 		Config: &extapi.JSON{
-// 			Raw: configJSON,
-// 		},
-// 	}
-
-// 	// This will likely fail due to missing secret, but should not panic
-// 	err = solver.Present(ch)
-// 	if err == nil {
-// 		// If it succeeds, clean up
-// 		solver.CleanUp(ch)
-// 	}
-// 	// We don't fail the test here since secrets won't be available in test environment
-// }
-
-// func TestSolver_Name(t *testing.T) {
-// 	solver := &solver{}
-// 	name := solver.Name()
-
-// 	if name != "inwx" {
-// 		t.Errorf("Expected solver name to be 'inwx', got '%s'", name)
-// 	}
-// }
-
-// func TestSolver_Timeout(t *testing.T) {
-// 	// Test that the solver doesn't hang indefinitely
-// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-// 	defer cancel()
-
-// 	solver := &solver{}
-
-// 	configData := testConfig{
-// 		Username: "test-user",
-// 		Password: "test-password",
-// 		TTL:      300,
-// 		Sandbox:  true,
-// 	}
-
-// 	configJSON, err := json.Marshal(configData)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal config: %v", err)
-// 	}
-
-// 	ch := &v1alpha1.ChallengeRequest{
-// 		ResolvedZone: zone,
-// 		ResolvedFQDN: fmt.Sprintf("_acme-challenge.timeout-test.%s", zone),
-// 		Key:          "test-key-value",
-// 		Config: &extapi.JSON{
-// 			Raw: configJSON,
-// 		},
-// 	}
-
-// 	done := make(chan error, 1)
-// 	go func() {
-// 		err := solver.Present(ch)
-// 		done <- err
-// 	}()
-
-// 	select {
-// 	case <-ctx.Done():
-// 		t.Error("Solver.Present() took too long and timed out")
-// 	case err := <-done:
-// 		// Expected to fail with dummy credentials, but should not timeout
-// 		if err == nil {
-// 			t.Error("Expected Present to fail with dummy credentials")
-// 		}
-// 	}
-// }
+func newTestK8SSecretUserPass() testK8SSecret {
+	data := TestK8SSecretData{
+		Username: envAsB64("INWX_USER"),
+		Password: envAsB64("INWX_PASSWORD"),
+	}
+	return newTestK8SSecret(data)
+}
+func newTestK8SSecretWith2FA() testK8SSecret {
+	data := TestK8SSecretData{
+		Username: envAsB64("INWX_USER_OTP"),
+		Password: envAsB64("INWX_PASSWORD_OTP"),
+		OTPKey:   envAsB64("INWX_OTPKEY"),
+	}
+	return newTestK8SSecret(data)
+}
+func envAsB64(key string) string {
+	val := os.Getenv(key)
+	return base64.StdEncoding.EncodeToString([]byte(val))
+}
+func newTestK8SSecret(data TestK8SSecretData) testK8SSecret {
+	return testK8SSecret{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Metadata: TestK8SSecretMetadata{
+			Name: "inwx-credentials",
+		},
+		Data: data,
+	}
+}

@@ -176,9 +176,7 @@ spec:
 
       1. Go to <https://ote.inwx.de/en/nameserver2#tab=ns> and add a new domain
 
-      1. Copy `testdata/config.json.tpl` to `testdata/config.json` and replace username and password placeholders
-
-      1. Copy `testdata/secret-inwx-credentials.yaml.tpl` to `testdata/secret-inwx-credentials.yaml` and replace username and password placeholders
+      1. Set INWX_USER, INWX_PASSWORD as environment variables with according values for the test run 
 
    1. With 2FA
 
@@ -186,9 +184,7 @@ spec:
 
       1. Go to <https://ote.inwx.de/en/nameserver2#tab=ns> and add a new domain
 
-      1. Copy `testdata/config-otp.json.tpl` to `testdata/config-otp.json` and replace username, password and OTP placeholders
-
-      1. Copy `testdata/secret-inwx-credentials-otp.yaml.tpl` to `testdata/secret-inwx-credentials-otp.yaml` and replace username, password and OTP placeholders
+      1. Set INWX_USER_OTP, INWX_PASSWORD_OTP and INWX_OTPKEY as environment variables with according values for the test run 
 
 1. Download dependencies
     ```bash
