@@ -16,8 +16,8 @@ import (
 	"github.com/realzollsoft/cert-manager-webhook-inwx/test"
 	"go.yaml.in/yaml/v3"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/klog"
-	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -253,7 +253,7 @@ func createBasicServerAndCtx(t *testing.T, name string, zoneStr string) (*server
 	klog.InitFlags(nil)
 	err := flag.Set("v", "3")
 	if err != nil {
-		t.Logf("error setting log flag", err)
+		t.Logf("error setting log flag %v", err)
 		t.FailNow()
 	}
 	flag.Parse()
