@@ -1,25 +1,20 @@
 package main
 
 // testConfig represents the test configuration structure
-// type testConfig struct {
-// 	Username             string `json:"username"`
-// 	Password             string `json:"password"`
-// 	OTPKey               string `json:"otpKey"`
-// 	UsernameSecretKeyRef struct {
-// 		Name string `json:"name"`
-// 		Key  string `json:"key"`
-// 	} `json:"usernameSecretKeyRef"`
-// 	PasswordSecretKeyRef struct {
-// 		Name string `json:"name"`
-// 		Key  string `json:"key"`
-// 	} `json:"passwordSecretKeyRef"`
-// 	OTPKeySecretKeyRef struct {
-// 		Name string `json:"name"`
-// 		Key  string `json:"key"`
-// 	} `json:"otpKeySecretKeyRef"`
-// 	TTL     int  `json:"ttl,omitempty"`
-// 	Sandbox bool `json:"sandbox,omitempty"`
-// }
+type testConfig struct {
+	Username             string       `json:"username"`
+	Password             string       `json:"password"`
+	OTPKey               string       `json:"otpKey"`
+	UsernameSecretKeyRef SecretKeyRef `json:"usernameSecretKeyRef"`
+	PasswordSecretKeyRef SecretKeyRef `json:"passwordSecretKeyRef"`
+	OTPKeySecretKeyRef   SecretKeyRef `json:"otpKeySecretKeyRef"`
+	TTL                  int          `json:"ttl,omitempty"`
+	Sandbox              bool         `json:"sandbox,omitempty"`
+}
+type SecretKeyRef struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
 
 var (
 // zone      = "zollsoft.de."
