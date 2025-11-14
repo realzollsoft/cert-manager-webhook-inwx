@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,11 +12,11 @@ import (
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	dns "github.com/cert-manager/cert-manager/test/acme"
 	"github.com/cert-manager/cert-manager/test/acme/server"
+	"github.com/go-logr/logr"
 	"github.com/realzollsoft/cert-manager-webhook-inwx/test"
 	"go.yaml.in/yaml/v3"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/klogr"
+	"k8s.io/klog/v2/textlogger"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -56,7 +55,14 @@ var (
 	zone      = "zollsoft.de."
 	zoneTwoFA = "zollsoftmfa.de."
 	fqdn      string
+	l         logr.Logger
 )
+
+func init() {
+	cfg := textlogger.NewConfig(textlogger.Verbosity(3))
+	l = textlogger.NewLogger(cfg).WithName("certmanager-inwx-test")
+	log.SetLogger(l)
+}
 
 func checkTestBasicPreconditions(t *testing.T) {
 	// Skip API integration tests if running with dummy credentials
@@ -250,15 +256,6 @@ func TestRunSuiteWithSecretAndTwoFA(t *testing.T) {
 }
 
 func createBasicServerAndCtx(t *testing.T, name string, zoneStr string) (*server.BasicServer, context.Context) {
-	klog.InitFlags(nil)
-	err := flag.Set("v", "3")
-	if err != nil {
-		t.Logf("error setting log flag %v", err)
-		t.FailNow()
-	}
-	flag.Parse()
-	l := klogr.New().WithName("certmanager-inwx-test")
-	log.SetLogger(l)
 	ctx := logf.NewContext(context.TODO(), l, t.Name())
 	srv := &server.BasicServer{
 		Handler: &test.Handler{
