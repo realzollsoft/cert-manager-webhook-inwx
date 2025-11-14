@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,6 +16,9 @@ import (
 	"github.com/realzollsoft/cert-manager-webhook-inwx/test"
 	"go.yaml.in/yaml/v3"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/klog"
+	"k8s.io/klog/klogr"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type testK8SSecret struct {
@@ -230,7 +234,16 @@ func TestRunSuiteWithSecretAndTwoFA(t *testing.T) {
 }
 
 func createBasicServerAndCtx(t *testing.T, name string, zoneStr string) (*server.BasicServer, context.Context) {
-	ctx := logf.NewContext(context.TODO(), logf.Log, t.Name())
+	klog.InitFlags(nil)
+	err := flag.Set("v", "3")
+	if err != nil {
+		t.Logf("error setting log flag", err)
+		t.FailNow()
+	}
+	flag.Parse()
+	l := klogr.New().WithName("certmanager-inwx-test")
+	log.SetLogger(l)
+	ctx := logf.NewContext(context.TODO(), l, t.Name())
 	srv := &server.BasicServer{
 		Handler: &test.Handler{
 			Log: logf.FromContext(ctx, name),
