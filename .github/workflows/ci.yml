@@ -171,7 +171,7 @@ jobs:
     name: Release Helm Chart
     runs-on: ubuntu-latest
     needs: [build-and-push]
-    if: github.event_name == 'release' && false
+    if: github.event_name == 'release'
     permissions:
       contents: read
       pages: write
@@ -179,34 +179,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: '3.13.0'
-      
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+          version: '3.18.6'
       
       - name: Prepare chart
         run: |
           mkdir -p public
           cp README.md deploy/cert-manager-webhook-inwx/
-          
-          # Package chart
-          helm package deploy/cert-manager-webhook-inwx -d public/
-          
-          # Create or update index
-          if [ -f public/index.yaml ]; then
-            helm repo index public --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} --merge public/index.yaml
-          else
-            helm repo index public --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          fi
-      
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
         with:
-          path: ./public
-      
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4 
+          charts_dir: deploy
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
