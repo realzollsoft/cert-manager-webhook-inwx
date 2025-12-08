@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/nrdcg/goinwx"
 	corev1 "k8s.io/api/core/v1"
@@ -13,7 +14,7 @@ type DNSClient interface {
 	Logout() error
 	CreateRecord(request *goinwx.NameserverRecordRequest) error
 	InfoRecords(request *goinwx.NameserverInfoRequest) (*NameserverInfoResponse, error)
-	DeleteRecord(recordID int) error
+	DeleteRecord(recordID string) error
 	UnlockAccount(otpKey string) error
 }
 
