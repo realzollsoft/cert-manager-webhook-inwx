@@ -60,6 +60,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y gettext-base
+      
+      - name: Fetch test binaries
+        run: ./scripts/fetch-test-binaries.sh
 
       - name: Download dependencies
         run: go mod download
