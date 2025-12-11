@@ -14,8 +14,11 @@ jobs:
     needs: [lint-helm]
     if: github.event_name == 'release'
     permissions:
-      contents: read
+      # write required to create a new release of the charts on gh
+      contents: write
+      # write required to publish the charts to pages
       pages: write
+      # write required to create a new token with the perms
       id-token: write
     steps:
       - name: Checkout
