@@ -1,0 +1,90 @@
+# reusable workflow
+name: .lint-and-test-go
+
+# TODO: hide reusable workflow from the UI. Tracked in https://github.com/community/community/discussions/12025
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+
+jobs:
+  lint-go:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.5'
+      
+      - name: Check Go formatting
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Go code is not formatted properly:"
+            gofmt -s -l .
+            echo "Please run 'gofmt -s -w .' to fix formatting"
+            exit 1
+          fi
+      
+      - name: Run go vet (built-in linter)
+        run: go vet ./...
+      
+      - name: Run staticcheck (modern code quality)
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+      
+      - name: Run basic Go checks
+        run: |
+          # Check for unused imports and other basic issues
+          go build -v ./...
+          echo "✅ Go code builds successfully"
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.5'
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y gettext-base
+      
+      - name: Fetch test binaries
+        run: ./scripts/fetch-test-binaries.sh
+
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Run tests (Unit tests only)
+        run: |
+          # Check if we have real INWX credentials
+          if [ -z "$INWX_USER" ] || [ "$INWX_USER" = "test-user" ]; then
+            echo "⚠️  No real INWX credentials found - API integration tests will be skipped"
+            echo "✅ Running tests (API tests will be skipped automatically)..."
+          else
+            echo "🔑 Real INWX credentials found - running full integration tests"
+          fi
+          go test -v -cover ./...
+        env:
+          INWX_USER: ${{ secrets.INWX_USER }}
+          INWX_PASSWORD: ${{ secrets.INWX_PASSWORD }}
+          INWX_USER_OTP: ${{ secrets.INWX_USER_OTP }}
+          INWX_PASSWORD_OTP: ${{ secrets.INWX_PASSWORD_OTP }}
+          INWX_OTPKEY: ${{ secrets.INWX_OTPKEY }}
+          TEST_ZONE_NAME: ${{ vars.TEST_ZONE_NAME }}
+          TEST_ZONE_NAME_WITH_TWO_FA: ${{ vars.TEST_ZONE_NAME_WITH_TWO_FA }}
+          TEST_ASSET_ETCD: "./kubebuilder/bin/etcd"
+          TEST_ASSET_KUBE_APISERVER: "./kubebuilder/bin/kube-apiserver"
+          TEST_ASSET_KUBECTL: "./kubebuilder/bin/kubectl"

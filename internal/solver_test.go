@@ -344,7 +344,7 @@ func TestDNSChallengeSolver(t *testing.T) {
 			setupMocks: func(dns *MockDNSClient, secrets *MockSecretReader, config *MockConfigProvider) {
 				// Pre-populate a record to clean up
 				dns.Records["example.com-_acme-challenge.example.com"] = &goinwx.NameserverRecord{
-					ID:      123,
+					ID:      "123",
 					Name:    "_acme-challenge.example.com",
 					Type:    "TXT",
 					Content: "old-challenge-key",
@@ -362,11 +362,11 @@ func TestDNSChallengeSolver(t *testing.T) {
 			},
 			validateMocks: func(t *testing.T, dns *MockDNSClient) {
 				if len(dns.DeletedRecordIDs) != 1 {
-					t.Errorf("Expected 1 record to be deleted, got %d", len(dns.DeletedRecordIDs))
+					t.Errorf("Expected 1 record to be deleted, got %v", len(dns.DeletedRecordIDs))
 					return
 				}
-				if dns.DeletedRecordIDs[0] != 123 {
-					t.Errorf("Expected record ID 123 to be deleted, got %d", dns.DeletedRecordIDs[0])
+				if dns.DeletedRecordIDs[0] != "123" {
+					t.Errorf("Expected record ID 123 to be deleted, got %v", dns.DeletedRecordIDs[0])
 				}
 			},
 		},
@@ -433,17 +433,18 @@ func LoadConfigFromChallenge(ch *v1alpha1.ChallengeRequest) (*Config, error) {
 	}
 
 	// Simple parsing for test cases
-	if configStr == `{"ttl": 600}` {
+	switch configStr {
+	case `{"ttl": 600}`:
 		config.TTL = 600
-	} else if configStr == `{"ttl": 100}` {
+	case `{"ttl": 100}`:
 		config.TTL = 300 // Use default for low TTL
-	} else if configStr == `{"sandbox": true}` {
+	case `{"sandbox": true}`:
 		config.Sandbox = true
-	} else if configStr == `{"username": "testuser", "password": "testpass", "otpKey": "secret123"}` {
+	case `{"username": "testuser", "password": "testpass", "otpKey": "secret123"}`:
 		config.Username = "testuser"
 		config.Password = "testpass"
 		config.OTPKey = "secret123"
-	} else if configStr == `{"usernameSecretKeyRef": {"name": "inwx-creds", "key": "username"}}` {
+	case `{"usernameSecretKeyRef": {"name": "inwx-creds", "key": "username"}}`:
 		config.UsernameSecretKeyRef = &SecretKeySelector{
 			Name: "inwx-creds",
 			Key:  "username",

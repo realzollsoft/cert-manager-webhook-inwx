@@ -1,4 +1,4 @@
-FROM golang:1.25.4-alpine3.22 AS build
+FROM golang:1.25.5-alpine3.22 AS build
 
 ARG GOARCH="amd64"
 ARG GOARM=""
@@ -6,6 +6,7 @@ ARG GOARM=""
 WORKDIR /workspace
 
 # Install ca-certificates for SSL connections
+# hadolint ignore=DL3018
 RUN apk update && apk add --no-cache ca-certificates git
 
 # Copy go.mod and go.sum first for better caching
