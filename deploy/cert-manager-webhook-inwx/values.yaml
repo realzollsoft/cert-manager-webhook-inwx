@@ -12,7 +12,7 @@ certManager:
 
 image:
   repository: ghcr.io/realzollsoft/cert-manager-webhook-inwx
-  tag: v0.0.1
+  tag: 0.0.3
   pullPolicy: IfNotPresent
 
 nameOverride: ""
