@@ -13,7 +13,7 @@ We also decided to handle the versioning independently from previously existing 
 
 - [helm](https://helm.sh/) >= v3.0.0
 - [kubernetes](https://kubernetes.io/) >= v1.30.0
-- [cert-manager](https://cert-manager.io/) >= 1.0.0
+- [cert-manager](https://cert-manager.io/) >= 1.19.1
 
 ## Configuration
 
@@ -45,7 +45,7 @@ Follow the [instructions](https://cert-manager.io/docs/installation/) using the 
 ### Webhook
 
 ```bash
-helm repo add zollsoft https://realzollsoft.github.io/helm-charts
+helm repo add zollsoft https://realzollsoft.github.io/cert-manager-webhook-inwx
 helm repo update
 helm install --namespace cert-manager cert-manager-webhook-inwx zollsoft/cert-manager-webhook-inwx
 ```
@@ -161,7 +161,7 @@ spec:
 
 ### Requirements
 
-- [go](https://golang.org/) >= 1.24.0
+- [go](https://golang.org/) >= 1.25.5
 
 ### Running the test suite
 
