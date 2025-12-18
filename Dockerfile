@@ -1,7 +1,4 @@
-FROM golang:1.25.5-alpine3.22 AS build
-
-ARG GOARCH="amd64"
-ARG GOARM=""
+FROM golang:1.25.5-alpine3.23 AS build
 
 WORKDIR /workspace
 
@@ -17,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOARCH=$GOARCH GOARM=$GOARM go build -v -o webhook \
+RUN CGO_ENABLED=0 go build -v -o webhook \
     -ldflags '-w -s -extldflags "-static"' .
 
 # Use distroless for better security

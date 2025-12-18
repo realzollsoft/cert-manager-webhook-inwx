@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
@@ -12,6 +11,7 @@ import (
 	certmgrv1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/nrdcg/goinwx"
 	"github.com/pquerna/otp/totp"
+	"github.com/realzollsoft/cert-manager-webhook-inwx/internal/util"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -41,6 +41,7 @@ type config struct {
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 	TTL                  int                         `json:"ttl,omitempty"`
 	Sandbox              bool                        `json:"sandbox,omitempty"`
+	FQDNNaming           bool                        `json:"fqdnNaming,omitempty"`
 	Username             string                      `json:"username"`
 	Password             string                      `json:"password"`
 	OTPKey               string                      `json:"otpKey"`
@@ -59,7 +60,6 @@ func (s *solver) Name() string {
 }
 
 func (s *solver) Present(ch *v1alpha1.ChallengeRequest) error {
-
 	client, cfg, err := s.newClientFromChallenge(ch)
 	if err != nil {
 		return err
@@ -73,8 +73,8 @@ func (s *solver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}()
 
 	var request = &goinwx.NameserverRecordRequest{
-		Domain:  strings.TrimRight(ch.ResolvedZone, "."),
-		Name:    strings.TrimRight(ch.ResolvedFQDN, "."),
+		Domain:  util.RemoveDotSuffixes(ch.ResolvedZone),
+		Name:    util.GatherName(cfg.FQDNNaming, ch.ResolvedFQDN, ch.ResolvedZone),
 		Type:    "TXT",
 		Content: ch.Key,
 		TTL:     cfg.TTL,
@@ -102,7 +102,6 @@ func (s *solver) Present(ch *v1alpha1.ChallengeRequest) error {
 }
 
 func (s *solver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-
 	client, cfg, err := s.newClientFromChallenge(ch)
 	if err != nil {
 		return err
@@ -116,8 +115,8 @@ func (s *solver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	}()
 
 	response, err := client.Nameservers.Info(&goinwx.NameserverInfoRequest{
-		Domain: strings.TrimRight(ch.ResolvedZone, "."),
-		Name:   strings.TrimRight(ch.ResolvedFQDN, "."),
+		Domain: util.RemoveDotSuffixes(ch.ResolvedZone),
+		Name:   util.GatherName(cfg.FQDNNaming, ch.ResolvedFQDN, ch.ResolvedZone),
 		Type:   "TXT",
 	})
 	if err != nil {
@@ -139,7 +138,6 @@ func (s *solver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 }
 
 func (s *solver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
-
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
 		return err
@@ -151,7 +149,6 @@ func (s *solver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{
 }
 
 func (s *solver) getCredentials(config *config, ns string) (*credentials, error) {
-
 	creds := credentials{}
 
 	if config.Username != "" {
