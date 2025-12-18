@@ -87,7 +87,7 @@ spec:
             config:
               ttl: 300 # default 300
               sandbox: false # default false
-
+              fqdnNaming: false # default false - will set fqdn as name of the entry if enabled, otherwise cut the zone from the fqdn
               # prefer using secrets!
               # username: USERNAME
               # password: PASSWORD
