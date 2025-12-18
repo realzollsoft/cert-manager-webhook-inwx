@@ -19,7 +19,7 @@ func TestGatherConfig(t *testing.T) {
 			fqdnNaming: true,
 			inZone:     "example.com.",
 			fqdn:       "_acme-challenge.example.com.",
-			expected:   "_acme-challenge.example.com",
+			expected:   "_acme-challenge.example.com.",
 		},
 		{
 			name:       "fqdn naming disabled",
@@ -33,7 +33,7 @@ func TestGatherConfig(t *testing.T) {
 			fqdnNaming: false,
 			inZone:     "_acme-challenge.example.com.",
 			fqdn:       "_acme-challenge.example.com.",
-			expected:   "_acme-challenge.example.com",
+			expected:   "_acme-challenge.example.com.",
 		},
 	}
 	for _, tt := range tests {
