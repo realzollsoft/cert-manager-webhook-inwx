@@ -1,0 +1,12 @@
+{
+    "go.testTimeout": "100s",
+    "go.testFlags": ["-count=1"],
+    "go.testEnvVars": {
+        "TEST_ASSET_ETCD": "kubebuilder/bin/etcd",
+        "TEST_ASSET_KUBE_APISERVER": "kubebuilder/bin/kube-apiserver"
+    },
+    "files.exclude": {
+        "**/.git": false
+    },
+    "chat.extensionUnification.enabled": false,
+}
