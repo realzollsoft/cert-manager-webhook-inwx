@@ -1,0 +1,18 @@
+#template: testify
+#dry-run: True
+issue-845-fix: True # deprecation warning, this is the new default (explicitly set to avoid warning)
+resolve-type-alias: False # deprecation warning, this is the new default (explicitly set to avoid warning)
+disable-version-string: True # deprecation warning, this is the new default (explicitly set to avoid warning)
+dir: "{{.InterfaceDir}}/mocks"
+outpkg: "mocks"
+mockname: "{{.InterfaceName}}"
+filename: "{{.InterfaceName}}.go"
+packages:
+  github.com/realzollsoft/cert-manager-webhook-inwx/internal/solver:
+    config:
+      recursive: False
+      with-expecter: True
+    interfaces:
+      INWXClient:
+      DNSServer:
+

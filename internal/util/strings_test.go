@@ -70,7 +70,7 @@ func TestRemoveDotSuffixes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := util.RemoveDotSuffixes(tt.in)
+			res := util.TrimTrailingDots(tt.in)
 			if res != tt.expected {
 				t.Errorf("expected res: %v to be equal to %v", res, tt.expected)
 			}

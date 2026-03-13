@@ -1,4 +1,14 @@
-#!/bin/sh
-os=$(uname -s)
-curl -sSL  https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.30.0-"$(echo "$os" | tr '[:upper:]' '[:lower:]')"-amd64.tar.gz | tar -zvxf -
+#!/bin/bash
+set -euo pipefail
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m)
+ver="v1.33.0"
 
+case "${arch}" in
+    x86_64*)     arch="amd64";;
+esac
+
+curl -sSL  "https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-${ver}/envtest-${ver}-${os}-${arch}.tar.gz" | tar -zvxf -
+rm -rf kubebuilder || true
+mv controller-tools kubebuilder
+mv kubebuilder/envtest kubebuilder/bin
