@@ -63,7 +63,7 @@
             ],
             "automerge": true,
             "automergeType": "pr",
-            "ignoreTests": true,
+            "ignoreTests": false,
             "matchPackageNames": [
                 "/^golang.org/x//",
                 "/^k8s.io//",
@@ -71,12 +71,12 @@
             ]
         },
         {
-            "description": "Pin major cert-manager updates for manual review",
+            "description": "Pin major and minor cert-manager updates for manual review",
             "matchPackageNames": [
                 "github.com/jetstack/cert-manager"
             ],
             "matchUpdateTypes": [
-                "major"
+                "major", "minor"
             ],
             "reviewersFromCodeOwners": true,
             "addLabels": [
