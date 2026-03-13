@@ -1,6 +1,6 @@
 module github.com/realzollsoft/cert-manager-webhook-inwx
 
-go 1.25.5
+go 1.26.1
 
 require (
 	github.com/cert-manager/cert-manager v1.19.4
@@ -116,7 +116,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.34.5 // indirect
+	k8s.io/apiserver v0.34.5
 	k8s.io/component-base v0.34.5 // indirect
 	k8s.io/kms v0.34.5 // indirect
 	k8s.io/kube-openapi v0.0.0-20251125145642-4e65d59e963e // indirect
