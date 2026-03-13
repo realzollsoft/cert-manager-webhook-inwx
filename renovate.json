@@ -16,18 +16,6 @@
     ],
     "packageRules": [
         {
-            "description": "Group only k8s.io packages",
-            "matchManagers": [
-                "gomod"
-            ],
-            "matchPackageNames": [
-                "/^k8s.io//"
-            ],
-            "groupName": "Kubernetes packages",
-            "semanticCommitType": "deps",
-            "semanticCommitScope": "k8s"
-        },
-        {
             "description": "Individual Go modules (not k8s.io)",
             "matchManagers": [
                 "gomod"
@@ -66,12 +54,12 @@
             "ignoreTests": false,
             "matchPackageNames": [
                 "/^golang.org/x//",
-                "/^k8s.io//",
+                "/^go.opentelemetry.io//",
                 "/^github.com/jetstack//"
             ]
         },
         {
-            "description": "Pin major and minor cert-manager updates for manual review",
+            "description": "Pin major and minor cert-manager updates for manual review (may require manual k8s-dependency update)",
             "matchPackageNames": [
                 "github.com/jetstack/cert-manager"
             ],
