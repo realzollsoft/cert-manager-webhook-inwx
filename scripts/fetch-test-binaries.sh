@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -euxo pipefail
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m)
 ver="v1.33.0"
