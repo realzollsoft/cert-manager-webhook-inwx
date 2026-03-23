@@ -161,7 +161,7 @@ spec:
 
 ### Requirements
 
-- [go](https://golang.org/) >= 1.25.5
+- [go](https://golang.org/) >= 1.26.1
 
 ### Running the test suite
 

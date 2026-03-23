@@ -20,7 +20,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25.5'
+          go-version: '1.26.1'
       
       - name: Check Go formatting
         run: |
@@ -55,7 +55,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25.5'
+          go-version: '1.26.1'
       
       - name: Install dependencies
         run: |
@@ -67,7 +67,8 @@ jobs:
       - name: Download dependencies
         run: go mod download
       
-      - name: Run tests (Unit tests only)
+      - name: Run tests ( test with INWX API)
+        if: github.event_name != 'pull_request'
         run: |
           # Check if we have real INWX credentials
           if [ -z "$INWX_USER" ] || [ "$INWX_USER" = "test-user" ]; then
@@ -83,6 +84,17 @@ jobs:
           INWX_USER_OTP: ${{ secrets.INWX_USER_OTP }}
           INWX_PASSWORD_OTP: ${{ secrets.INWX_PASSWORD_OTP }}
           INWX_OTPKEY: ${{ secrets.INWX_OTPKEY }}
+          TEST_ZONE_NAME: ${{ vars.TEST_ZONE_NAME }}
+          TEST_ZONE_NAME_WITH_TWO_FA: ${{ vars.TEST_ZONE_NAME_WITH_TWO_FA }}
+          TEST_ASSET_ETCD: "./kubebuilder/bin/etcd"
+          TEST_ASSET_KUBE_APISERVER: "./kubebuilder/bin/kube-apiserver"
+          TEST_ASSET_KUBECTL: "./kubebuilder/bin/kubectl"
+      - name: Run tests (Tests without INWX API)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Running tests without INWX API"
+          go test -v -cover ./...
+        env:
           TEST_ZONE_NAME: ${{ vars.TEST_ZONE_NAME }}
           TEST_ZONE_NAME_WITH_TWO_FA: ${{ vars.TEST_ZONE_NAME_WITH_TWO_FA }}
           TEST_ASSET_ETCD: "./kubebuilder/bin/etcd"

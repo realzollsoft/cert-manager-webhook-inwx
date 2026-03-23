@@ -63,20 +63,21 @@
             ],
             "automerge": true,
             "automergeType": "pr",
-            "ignoreTests": true,
+            "ignoreTests": false,
             "matchPackageNames": [
                 "/^golang.org/x//",
                 "/^k8s.io//",
+                "/^go.opentelemetry.io//",
                 "/^github.com/jetstack//"
             ]
         },
         {
-            "description": "Pin major cert-manager updates for manual review",
+            "description": "Pin major and minor cert-manager updates for manual review (may require manual k8s-dependency update)",
             "matchPackageNames": [
                 "github.com/jetstack/cert-manager"
             ],
             "matchUpdateTypes": [
-                "major"
+                "major", "minor"
             ],
             "reviewersFromCodeOwners": true,
             "addLabels": [

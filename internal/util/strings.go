@@ -9,16 +9,20 @@ func GatherName(fqdnNaming bool, resolvedFqdn, resolvedZone string) string {
 	if fqdnNaming {
 		return resolvedFqdn
 	}
+
+	// Strip zone suffix and remove trailing dots
 	res := strings.TrimSuffix(resolvedFqdn, resolvedZone)
 	res = strings.TrimRight(res, ".")
-	if res != "" {
-		return res
+
+	// Return original if stripping resulted in empty string
+	if res == "" {
+		return resolvedFqdn
 	}
-	// Fallback: if result is empty, just return fqdn
-	return resolvedFqdn
+
+	return res
 }
 
-// RemoveDotSuffixes removes all dots at the end of the given string
-func RemoveDotSuffixes(in string) string {
+// TrimTrailingDots removes all trailing dots from a string
+func TrimTrailingDots(in string) string {
 	return strings.TrimRight(in, ".")
 }
