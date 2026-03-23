@@ -16,6 +16,18 @@
     ],
     "packageRules": [
         {
+            "description": "Group only k8s.io packages",
+            "matchManagers": [
+                "gomod"
+            ],
+            "matchPackageNames": [
+                "/^k8s.io//"
+            ],
+            "groupName": "Kubernetes packages",
+            "semanticCommitType": "deps",
+            "semanticCommitScope": "k8s"
+        },
+        {
             "description": "Individual Go modules (not k8s.io)",
             "matchManagers": [
                 "gomod"
@@ -54,6 +66,7 @@
             "ignoreTests": false,
             "matchPackageNames": [
                 "/^golang.org/x//",
+                "/^k8s.io//",
                 "/^go.opentelemetry.io//",
                 "/^github.com/jetstack//"
             ]
