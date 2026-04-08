@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 )
+
+const secretKeyRefName = "inwx-credentials"
 
 // testConfig represents the test configuration structure
 type testConfig struct {
@@ -123,7 +124,7 @@ func runConformanceTests(td *componentTestData, zone string, fqdn string, config
 }
 
 func keyRef(key string) SecretKeyRef {
-	return SecretKeyRef{Name: "inwx-credentials", Key: key}
+	return SecretKeyRef{Name: secretKeyRefName, Key: key}
 }
 
 // jsonBytesWithSandboxAndTTL300 sets "sandbox" in config to "true" and a TTL of 300
@@ -145,15 +146,13 @@ func writeSecretConfigToDir(t *testing.T, fName string, v corev1.Secret) string 
 	require.NoError(t, err, "Couldn't write secret config")
 	return testDir
 }
+
 func usernamePassCredentials() (string, string) {
 	return os.Getenv("INWX_USER"), os.Getenv("INWX_PASSWORD")
 }
+
 func otpCredentials() (string, string, string) {
 	return os.Getenv("INWX_USER_OTP"), os.Getenv("INWX_PASSWORD_OTP"), os.Getenv("INWX_OTPKEY")
-}
-
-func asB64(val string) string {
-	return base64.StdEncoding.EncodeToString([]byte(val))
 }
 
 func envOrDefault(env string, dflt string) string {
@@ -172,6 +171,11 @@ type componentTestData struct {
 }
 
 func createComponentTestData(t *testing.T, isOTPTest bool) *componentTestData {
+	assertEqual := func(exp, actual, name string) {
+		if exp != actual { // not using testify to avoid leaking credentials
+			t.Errorf("Credential for %v is not equal", name)
+		}
+	}
 	dnsHandler := mocks.NewDNSServer(t)
 	td := &componentTestData{
 		t:          t,
@@ -185,7 +189,18 @@ func createComponentTestData(t *testing.T, isOTPTest bool) *componentTestData {
 		t.Log("Found no credentials in env, will run test without INWX API")
 		// mock calls to inwx client
 		td.inwxClient = mocks.NewINWXClient(t)
-		mockINWXClientBuilder := func(cfg *solver.Config, creds *solver.Credentials) solver.INWXClient { return td.inwxClient }
+		mockINWXClientBuilder := func(cfg *solver.Config, creds *solver.Credentials) solver.INWXClient {
+			var expUname, expPass, expOTP string
+			if isOTPTest {
+				expUname, expPass, expOTP = td.safeOTPCredentials()
+				assertEqual(expOTP, creds.OTPKey, "OTPKey")
+			} else {
+				expUname, expPass = td.safeUserPassCredentials()
+			}
+			assertEqual(expUname, creds.Username, "Username")
+			assertEqual(expPass, creds.Password, "Password")
+			return td.inwxClient
+		}
 		td.solver = solver.NewWithInwxClient(mockINWXClientBuilder)
 	}
 	return td
@@ -193,22 +208,22 @@ func createComponentTestData(t *testing.T, isOTPTest bool) *componentTestData {
 
 func (td *componentTestData) secretConfig(withOTP bool) ([]byte, string) {
 	configData := testConfig{UsernameSecretKeyRef: keyRef("username"), PasswordSecretKeyRef: keyRef("password")}
-	var data map[string]string
+	var data map[string][]byte
 	fNameFmtArg := ""
 	if withOTP {
 		fNameFmtArg = "otp-"
 		configData.OTPKeySecretKeyRef = keyRef("otpKey")
 		user, pass, otpKey := td.safeOTPCredentials()
-		data = map[string]string{"username": asB64(user), "password": asB64(pass), "otpKey": asB64(otpKey)}
+		data = map[string][]byte{"username": []byte(user), "password": []byte(pass), "otpKey": []byte(otpKey)}
 	} else {
 		user, pass := td.safeUserPassCredentials()
-		data = map[string]string{"username": asB64(user), "password": asB64(pass)}
+		data = map[string][]byte{"username": []byte(user), "password": []byte(pass)}
 	}
 	configJSON := jsonBytesWithSandboxAndTTL300(td.t, &configData)
 	sec := corev1.Secret{
 		TypeMeta:   v1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-		ObjectMeta: v1.ObjectMeta{Name: "inwx-credentials"},
-		StringData: data,
+		ObjectMeta: v1.ObjectMeta{Name: secretKeyRefName},
+		Data:       data,
 	}
 	fd := writeSecretConfigToDir(td.t, fmt.Sprintf("inwx-%ssecret.yaml", fNameFmtArg), sec)
 	return configJSON, fd
